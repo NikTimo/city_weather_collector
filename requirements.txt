@@ -1,0 +1,10 @@
+certifi==2023.5.7
+charset-normalizer==3.2.0
+geographiclib==2.0
+idna==3.4
+peewee==3.16.2
+psycopg2==2.9.6
+pycountry==22.3.5
+python-dotenv==1.0.0
+requests==2.31.0
+urllib3==2.0.4

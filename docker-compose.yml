@@ -1,0 +1,30 @@
+version: '3.3'
+volumes:
+  pg_data:
+  pg_admin:
+  logs:
+
+services:
+  db:
+    image: postgres:15.3
+    env_file: .env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  collector:
+    build: .
+    volumes:
+      - logs:/app/logs
+    depends_on:
+        - db
+    command: ["./wait-for-it.sh", "db:5432", "--", "python", "city_weather_collector.py"]
+
+  pgadmin:
+    image: dpage/pgadmin4:7.4
+    env_file: .env
+    ports:
+        - 15432:80
+    volumes:
+        - pg_admin:/var/lib/pgadmin
+    depends_on:
+        - db
