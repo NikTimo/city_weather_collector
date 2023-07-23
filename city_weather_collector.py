@@ -12,8 +12,9 @@ import pycountry
 import requests
 from dotenv import load_dotenv
 
+
 load_dotenv()
-RETRY_PERIOD = 120
+RETRY_PERIOD = 3600
 
 API_ENDPOINT_WEATHER = 'https://api.openweathermap.org/data/2.5/weather?'
 API_ENDPOINT_COORD = 'http://api.openweathermap.org/geo/1.0/direct?'
@@ -70,7 +71,9 @@ class City(BaseModel):
 
 
 class Weather(BaseModel):
-    city = peewee.ForeignKeyField(City, on_delete='CASCADE')
+    city = peewee.ForeignKeyField(
+        City, on_delete='CASCADE', backref='weathers'
+    )
     UTC_timestamp = peewee.TimestampField(utc=True)
     timezone = peewee.TimestampField()
     UTC_time = peewee.TimeField()
@@ -88,10 +91,11 @@ class Weather(BaseModel):
     wind_deg = peewee.SmallIntegerField()
 
     def __str__(self):
-        return f'{self.city.name}'
+        return f'{self.city.name}, {self.temperature}'
 
 
 def read_cities_from_file():
+    '''Функция чтения списка городов из текстового файла'''
     logger.debug(
         f'Запущена чтения городов из файла: '
         f'{read_cities_from_file.__name__}'
@@ -101,6 +105,8 @@ def read_cities_from_file():
 
 
 def get_country_code_by_name_ru(country_ru):
+    '''Функция получения двузначного кода страны по ISO-3166
+    для названия страны на русском языке'''
     logger.debug(
         f'Запущена функция получения двузначного кода по названию страны: '
         f'{get_country_code_by_name_ru.__name__}'
@@ -117,13 +123,14 @@ def get_country_code_by_name_ru(country_ru):
         )
 
 
-def get_api_answer_coords(city, country):
+def get_api_answer_coords(city):
+    '''Функция получения координат города чере Geocoding API'''
     logger.debug(
         f'Запущена функция получения ответа API: '
         f'{get_api_answer_coords.__name__}'
     )
     payload = {
-        'q': f'{city},{get_country_code_by_name_ru(country)}',
+        'q': f'{city.name},{city.country_code}',
         'limit': API_RESPONSE_LIMIT,
         'appid': API_KEY
     }
@@ -140,6 +147,7 @@ def get_api_answer_coords(city, country):
 
 
 def get_api_answer_weather(city):
+    '''Функция получения погодных условий'''
     logger.debug(
         f'Запущена функция получения ответа API: '
         f'{get_api_answer_weather.__name__}'
@@ -164,6 +172,7 @@ def get_api_answer_weather(city):
 
 
 def check_response(response, key_list):
+    '''Функция првоерки наличия необходиимых ключей в ответе API'''
     logger.debug(
         f'Запущена функция проверки ответа API: '
         f'{check_response.__name__}'
@@ -180,6 +189,7 @@ def check_response(response, key_list):
 
 
 def add_cities():
+    '''Функция добавления новых городов в базу данных'''
     logger.debug(
         f'Запущена функция добавления городов в базу: '
         f'{add_cities.__name__}'
@@ -192,15 +202,15 @@ def add_cities():
     ]
     cities_bulk = []
     for city in new_cities:
-        response = get_api_answer_coords(city[0], city[1])
-        if check_response(response, ['lat', 'lon']):
-            cities_bulk.append(City(
-                name=city[0],
-                country=city[1],
-                country_code=get_country_code_by_name_ru(city[1]),
-                latitude=response['lat'],
-                longitude=response['lon'],
-            ))
+        object = City(
+            name=city[0],
+            country=city[1],
+            country_code=get_country_code_by_name_ru(city[1]),
+        )
+        object.latitude = get_api_answer_coords(object)['lat']
+        object.longitude = get_api_answer_coords(object)['lon']
+        cities_bulk.append(object)
+
     try:
         if cities_bulk:
             City.bulk_create(cities_bulk)
@@ -212,6 +222,7 @@ def add_cities():
 
 
 def add_weather():
+    '''Функция добавления погодных условий в базу данных'''
     logger.debug(
         f'Запущена функция добавления погоды в базу: '
         f'{add_weather.__name__}'

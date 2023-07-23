@@ -15,6 +15,7 @@ services:
     build: .
     volumes:
       - logs:/app/logs
+      - ./city_list.txt:/app/city_list.txt
     depends_on:
         - db
     command: ["./wait-for-it.sh", "db:5432", "--", "python", "city_weather_collector.py"]
