@@ -7,7 +7,7 @@
 - ORM: Peewee,
 - PgAdmin
 ## Запуск проекта:
-Создайте файл .env на основе файла .env.example
+Создайте файл .env на основе файла .env.example.
 Проект подготовлен к запуску в docker-контейнерах и начнет работу после запуска.
 ~~~bash
 docker compose up --build
